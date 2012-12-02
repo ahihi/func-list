@@ -86,7 +86,10 @@ foldMF f = go
 
 -- Monadic sequence
 sequenceF :: (Monad m) => List (m a) -> m (List a)
-sequenceF (viewF -> Just (x, xs)) = x >> sequenceF xs
+sequenceF (viewF -> Just (x, xs)) = do
+    y <- x
+    ys <- sequenceF xs
+    return $ y -:- ys
 sequenceF _                       = return emptyF
 
 -- Monadic sequence with no return value
@@ -95,12 +98,8 @@ sequenceF_ xs = sequenceF xs >> return ()
 
 -- Monadic map
 mapMF :: (Monad m) => (a -> m b) -> List a -> m (List b)
-mapMF f (viewF -> Just (x, xs)) = do
-    y <- f x
-    ys <- mapMF f xs
-    return $ y -:- ys
-mapMF _ _                       = return emptyF
+mapMF f = sequenceF . mapF f
 
 -- Monadic map with no return value
 mapMF_ :: (Monad m) => (a -> m b) -> List a -> m ()
-mapMF_ f xs = mapMF f xs >> return ()
+mapMF_ f = sequenceF_ . mapF f
