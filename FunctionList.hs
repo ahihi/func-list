@@ -76,3 +76,31 @@ filterF p = foldrF p' emptyF
 -- Reverse
 reverseF :: List a -> List a
 reverseF = foldlF (flip (-:-)) emptyF
+
+-- Monadic fold
+foldMF :: (Monad m) => (b -> a -> m b) -> b -> List a -> m b
+foldMF f = go
+    where
+        go y (viewF -> Just (x, xs)) = f y x >>= \ y' -> go y' xs
+        go y _                       = return y
+
+-- Monadic sequence
+sequenceF :: (Monad m) => List (m a) -> m (List a)
+sequenceF (viewF -> Just (x, xs)) = x >> sequenceF xs
+sequenceF _                       = return emptyF
+
+-- Monadic sequence with no return value
+sequenceF_ :: (Monad m) => List (m a) -> m ()
+sequenceF_ xs = sequenceF xs >> return ()
+
+-- Monadic map
+mapMF :: (Monad m) => (a -> m b) -> List a -> m (List b)
+mapMF f (viewF -> Just (x, xs)) = do
+    y <- f x
+    ys <- mapMF f xs
+    return $ y -:- ys
+mapMF _ _                       = return emptyF
+
+-- Monadic map with no return value
+mapMF_ :: (Monad m) => (a -> m b) -> List a -> m ()
+mapMF_ f xs = mapMF f xs >> return ()
